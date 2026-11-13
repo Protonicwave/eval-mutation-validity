@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>eval-mutation-validity console (mock-up)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Source+Sans+3:wght@400;600;700&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<style>
+/* Tokens. The three series colours are the project plan's own, so H1, H2 and H3
+   keep one key across the PDF and this console. */
+:root {
+  color-scheme: light dark;
+  --hue: 250;
+  --ground: oklch(0.982 0.004 var(--hue));
+  --surface: oklch(0.995 0.002 var(--hue));
+  --sunken: oklch(0.958 0.006 var(--hue));
+  --line: oklch(0.89 0.008 var(--hue));
+  --line-strong: oklch(0.78 0.01 var(--hue));
+  --ink: oklch(0.24 0.02 var(--hue));
+  --ink-2: oklch(0.42 0.018 var(--hue));
+  --ink-3: oklch(0.52 0.014 var(--hue));
+  --h1: oklch(0.400 0.084 249.8);
+  --h1-pale: oklch(0.86 0.035 249.8);
+  --h2: oklch(0.564 0.135 42.8);
+  --h3: oklch(0.556 0 0);
+  --on-series: oklch(0.99 0.002 var(--hue));
+  --cleared: oklch(0.50 0.10 155);
+  --watch: oklch(0.52 0.11 75);
+  --fired: oklch(0.52 0.17 22);
+  --fired-tint: oklch(0.95 0.03 22);
+  --changed-tint: oklch(0.93 0.04 249.8);
+
+  --sans: "Source Sans 3", "Source Sans Pro", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --text-xs: 0.8125rem;
+  --text-sm: 0.875rem;
+  --text-md: 1rem;
+  --text-lg: clamp(1.125rem, 1.05rem + 0.3vw, 1.25rem);
+  --text-xl: clamp(1.5rem, 1.3rem + 0.9vw, 2rem);
+  --text-figure: clamp(2rem, 1.6rem + 1.6vw, 2.75rem);
+
+  --s1: 4px; --s2: 8px; --s3: 12px; --s4: 16px; --s5: 24px; --s6: 32px; --s7: 48px; --s8: 64px;
+  --radius-sm: 3px;
+  --radius-md: 6px;
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --fast: 160ms;
+  --settle: 240ms;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ground: oklch(0.19 0.012 var(--hue));
+    --surface: oklch(0.225 0.013 var(--hue));
+    --sunken: oklch(0.205 0.012 var(--hue));
+    --line: oklch(0.32 0.014 var(--hue));
+    --line-strong: oklch(0.42 0.016 var(--hue));
+    --ink: oklch(0.93 0.008 var(--hue));
+    --ink-2: oklch(0.78 0.012 var(--hue));
+    --ink-3: oklch(0.68 0.012 var(--hue));
+    --h1: oklch(0.72 0.085 249.8);
+    --h1-pale: oklch(0.40 0.05 249.8);
+    --h2: oklch(0.72 0.11 42.8);
+    --h3: oklch(0.68 0 0);
+    --on-series: oklch(0.18 0.012 var(--hue));
+    --cleared: oklch(0.74 0.11 155);
+    --watch: oklch(0.78 0.11 75);
+    --fired: oklch(0.72 0.15 22);
+    --fired-tint: oklch(0.27 0.05 22);
+    --changed-tint: oklch(0.32 0.05 249.8);
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0;
+  background: var(--ground);
+  color: var(--ink);
+  font: 400 var(--text-md)/1.5 var(--sans);
+  font-variant-numeric: tabular-nums;
+}
+h1, h2, h3 { margin: 0; line-height: 1.15; letter-spacing: -0.01em; text-wrap: balance; }
+p { margin: 0; text-wrap: pretty; }
+code, .id, .fig { font-family: var(--mono); font-size: 0.92em; }
+a { color: var(--h1); text-underline-offset: 3px; }
+:focus-visible { outline: 2px solid var(--h1); outline-offset: 2px; border-radius: var(--radius-sm); }
+.visually-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+/* Header and navigation */
+.bar { background: var(--surface); border-bottom: 1px solid var(--line); position: sticky; top: 0; z-index: 5; }
+.bar-inner { max-width: 1440px; margin: 0 auto; padding: var(--s3) var(--s5); display: flex; flex-wrap: wrap; align-items: center; gap: var(--s3) var(--s6); }
+.wordmark { font-family: var(--mono); font-weight: 500; font-size: var(--text-sm); color: var(--ink); text-decoration: none; }
+.sample-note { font-size: var(--text-sm); color: var(--ink-3); }
+.tabs { display: flex; gap: var(--s1); margin: 0; padding: 0; list-style: none; order: 3; flex-basis: 100%; }
+.tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 var(--s3); color: var(--ink-2); text-decoration: none; font-weight: 600; font-size: var(--text-md); border-bottom: 2px solid transparent; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); border-bottom-color: var(--h1); }
+.live-control { margin-left: auto; }
+@media (min-width: 900px) {
+  .tabs { order: 0; flex-basis: auto; }
+  .tabs a { min-height: 40px; }
+}
+
+button { font: inherit; cursor: pointer; }
+.btn { min-height: 40px; padding: var(--s2) var(--s4); border-radius: var(--radius-sm); border: 1px solid var(--line-strong); background: var(--surface); color: var(--ink); font-weight: 600; font-size: var(--text-sm); text-align: left; }
+.btn:hover { border-color: var(--ink-3); background: var(--sunken); }
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--h1); border-color: var(--h1); color: var(--on-series); }
+.btn-primary:hover { background: oklch(from var(--h1) calc(l - 0.05) c h); border-color: oklch(from var(--h1) calc(l - 0.05) c h); }
+.btn[aria-pressed="true"] { background: var(--sunken); border-color: var(--ink-3); }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+main { max-width: 1440px; margin: 0 auto; padding: var(--s5); }
+.view[hidden] { display: none; }
+.view-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: var(--s2) var(--s4); margin-bottom: var(--s5); }
+.view-head h1 { font-size: var(--text-xl); font-weight: 700; }
+.view-head p { color: var(--ink-2); }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-md); padding: var(--s5); }
+.panel-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: var(--s2) var(--s4); margin-bottom: var(--s4); }
+.panel-head h2 { font-size: var(--text-lg); font-weight: 700; }
+.panel-head p { color: var(--ink-3); font-size: var(--text-sm); }
+
+.badge { display: inline-flex; align-items: center; padding: 0 6px; border-radius: 2px; font: 700 0.75rem/1.6 var(--sans); color: var(--on-series); }
+.badge-h1 { background: var(--h1); }
+.badge-h2 { background: var(--h2); }
+.badge-h3 { background: var(--h3); }
+.status { font-weight: 600; font-size: var(--text-sm); }
+.status-cleared { color: var(--cleared); }
+.status-watch { color: var(--watch); }
+.status-fired { color: var(--fired); }
+.status-quiet { color: var(--ink-3); }
+
+/* Week rail: the plan's 32 weeks, milestones above, risk triggers below. */
+.rail { margin-bottom: var(--s5); }
+.rail-text { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--s1) var(--s4); font-size: var(--text-sm); color: var(--ink-2); margin-bottom: var(--s3); }
+.rail-text strong { color: var(--ink); }
+.rail-track { position: relative; height: 56px; }
+.rail-line { position: absolute; left: 0; right: 0; top: 27px; height: 2px; background: var(--line); }
+.rail-done { position: absolute; left: 0; top: 26px; height: 4px; background: var(--h1); border-radius: 2px; }
+.rail-now { position: absolute; top: 14px; width: 2px; height: 28px; background: var(--ink); transform: translateX(-1px); }
+.rail-mark { position: absolute; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; font-size: var(--text-xs); color: var(--ink-3); line-height: 1; }
+.rail-mark.milestone { top: 0; gap: 3px; }
+.rail-mark.milestone i { width: 9px; height: 9px; background: var(--ink-2); transform: rotate(45deg); margin-top: 13px; order: 2; }
+.rail-mark.milestone.done i { background: var(--ink); }
+.rail-mark.milestone span { order: 1; position: absolute; top: 0; }
+.rail-mark.trigger { top: 33px; }
+.rail-mark.trigger i { width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 9px solid var(--line-strong); }
+.rail-mark.trigger.fired i { border-bottom-color: var(--fired); }
+.rail-mark.trigger.fired span { color: var(--fired); font-weight: 700; margin-top: 2px; }
+
+/* Overview grid */
+.overview-grid { display: grid; gap: var(--s5); grid-template-columns: 1fr; }
+@media (min-width: 1100px) { .overview-grid { grid-template-columns: minmax(340px, 5fr) 7fr; align-items: start; } }
+.stack { display: grid; gap: var(--s5); }
+
+/* Attention queue */
+.queue { list-style: none; margin: 0; padding: 0; }
+.item { padding: var(--s4) 0; border-top: 1px solid var(--line); position: relative; }
+.item:first-child { border-top: 0; padding-top: 0; }
+.item-flag { display: flex; flex-wrap: wrap; gap: var(--s2); align-items: baseline; margin-bottom: var(--s1); }
+.item-flag .since { color: var(--ink-3); font-size: var(--text-sm); }
+.item-title { font-weight: 600; }
+.item-detail { color: var(--ink-2); font-size: var(--text-sm); margin-top: var(--s1); }
+.item-actions { margin-top: var(--s3); display: flex; flex-wrap: wrap; gap: var(--s2) var(--s4); align-items: center; }
+.item-actions a { font-size: var(--text-sm); }
+.queue-empty { color: var(--ink-2); padding: var(--s4) 0 0; }
+
+/* Spend */
+.spend-figure { font-size: var(--text-figure); font-weight: 700; line-height: 1; letter-spacing: -0.02em; }
+.spend-figure small { font-size: var(--text-md); font-weight: 400; color: var(--ink-2); letter-spacing: 0; margin-left: var(--s2); }
+.spend-bar { position: relative; height: 12px; margin: var(--s4) 0 var(--s2); background: var(--sunken); border: 1px solid var(--line); border-radius: var(--radius-sm); overflow: hidden; }
+.spend-bar .spent, .spend-bar .projected { position: absolute; inset: 0; transform-origin: left center; transform: scaleX(0); }
+.spend-bar .spent { background: var(--h1); }
+.spend-bar .projected { background: repeating-linear-gradient(135deg, var(--h1-pale) 0 4px, transparent 4px 8px); }
+.spend-scale { display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--ink-3); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: var(--s1) var(--s4); margin: var(--s4) 0 0; font-size: var(--text-sm); }
+.facts dt { color: var(--ink-2); }
+.facts dd { margin: 0; text-align: right; }
+
+/* Forest plot: one row per regression, one shared axis. */
+.forest { --id-col: 168px; --val-col: 184px; }
+.forest-legend { display: flex; flex-wrap: wrap; gap: var(--s2) var(--s5); font-size: var(--text-sm); color: var(--ink-2); margin-bottom: var(--s3); }
+.legend-key { display: inline-flex; align-items: center; gap: var(--s2); }
+.legend-key i { display: inline-block; }
+.key-ci { width: 22px; height: 2px; background: var(--h1); position: relative; }
+.key-ci::after { content: ""; position: absolute; left: 8px; top: -3px; width: 8px; height: 8px; border-radius: 50%; background: var(--h1); }
+.key-running { width: 22px; height: 0; border-top: 2px dashed var(--h1); }
+.key-threshold { width: 0; height: 14px; border-left: 2px solid var(--h2); }
+.forest-rows { list-style: none; margin: 0; padding: 0; }
+.frow { display: grid; grid-template-columns: var(--id-col) 1fr var(--val-col); align-items: center; gap: var(--s3); min-height: 26px; position: relative; }
+.frow .id { font-size: var(--text-xs); color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.frow .val { font-family: var(--mono); font-size: var(--text-xs); color: var(--ink-2); text-align: right; white-space: nowrap; }
+.frow.target-start { border-top: 1px solid var(--line); }
+.track { position: relative; height: 26px; }
+.track::before, .track::after { content: ""; position: absolute; top: 0; bottom: 0; width: 0; }
+.track::before { left: var(--zero); border-left: 1px solid var(--line-strong); }
+.track::after { left: var(--threshold); border-left: 2px solid var(--h2); opacity: 0.8; }
+.ci { position: absolute; top: 12px; height: 2px; background: var(--h1); }
+.pt { position: absolute; top: 9px; width: 8px; height: 8px; margin-left: -4px; border-radius: 50%; background: var(--h1); }
+.frow.running .ci { background: none; border-top: 2px dashed var(--h1); height: 0; }
+.frow.running .pt { background: var(--surface); border: 2px solid var(--h1); }
+.frow.blocked .id { color: var(--ink-3); }
+.blocked-note { position: absolute; left: 0; right: 0; top: 4px; font-size: var(--text-xs); color: var(--fired); }
+.frow.pooled { border-top: 1px solid var(--line-strong); margin-top: var(--s2); padding-top: var(--s2); }
+.frow.pooled .id, .frow.pooled .val { font-weight: 700; color: var(--ink); font-family: var(--sans); font-size: var(--text-sm); }
+.frow.pooled .pt { width: 12px; height: 12px; margin-left: -6px; top: 7px; border-radius: 0; transform: rotate(45deg); }
+.frow.pooled .ci { height: 4px; top: 11px; }
+.axis { display: grid; grid-template-columns: var(--id-col) 1fr var(--val-col); gap: var(--s3); margin-top: var(--s1); }
+.axis-scale { position: relative; height: 18px; font-size: var(--text-xs); color: var(--ink-3); }
+.axis-scale span { position: absolute; transform: translateX(-50%); }
+.forest-verdict { margin-top: var(--s4); padding-top: var(--s4); border-top: 1px solid var(--line); color: var(--ink-2); font-size: var(--text-sm); }
+.forest-verdict strong { color: var(--ink); }
+@media (max-width: 640px) {
+  .forest { --val-col: 44px; }
+  .frow, .axis { grid-template-columns: 1fr var(--val-col); column-gap: var(--s3); row-gap: 0; }
+  .frow .id { grid-column: 1 / -1; padding-top: var(--s1); }
+  .frow.pooled .id { grid-column: auto; }
+  .frow.pooled { grid-template-columns: auto 1fr var(--val-col); }
+  .axis > span:first-child { display: none; }
+  .frow .ci-text { display: none; }
+}
+.blocked-note { white-space: nowrap; right: auto; padding-right: var(--s2); background: var(--surface); z-index: 1; }
+.badge-group { white-space: nowrap; }
+
+/* Change marker: a tint that fades by opacity. */
+.flash { position: relative; isolation: isolate; }
+.flash::before { content: ""; position: absolute; inset: -2px -6px; background: var(--changed-tint); border-radius: var(--radius-sm); z-index: -1; opacity: 0; will-change: opacity; animation: fade-tint 1.6s ease-out; }
+@keyframes fade-tint { from { opacity: 1; } to { opacity: 0; } }
+.show-new { border: 0; background: none; padding: 0; color: var(--h1); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; min-height: 24px; }
+
+/* Tables */
+.table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--surface); }
+table { border-collapse: collapse; width: 100%; font-size: var(--text-sm); }
+caption { text-align: left; padding: var(--s4) var(--s4) var(--s2); color: var(--ink-2); }
+th, td { padding: var(--s2) var(--s4); text-align: left; border-top: 1px solid var(--line); vertical-align: top; }
+thead th { border-top: 0; color: var(--ink-2); font-weight: 600; white-space: nowrap; background: var(--sunken); }
+td.num, th.num { text-align: right; }
+td .id { white-space: nowrap; }
+.filters { display: flex; flex-wrap: wrap; gap: var(--s2); margin-bottom: var(--s4); }
+
+/* Hypotheses */
+.hyp-list { display: grid; gap: var(--s5); }
+.hyp-head { display: flex; gap: var(--s3); align-items: baseline; margin-bottom: var(--s2); }
+.hyp-head h2 { font-size: var(--text-lg); }
+.hyp-rule { color: var(--ink-2); font-size: var(--text-sm); max-width: 75ch; margin-bottom: var(--s4); }
+.line-chart { --zero: 0%; --threshold: 0%; }
+.lrow { display: grid; grid-template-columns: minmax(120px, 220px) 1fr minmax(110px, 150px); gap: var(--s3); align-items: center; min-height: 30px; font-size: var(--text-sm); }
+.lrow .val { font-family: var(--mono); font-size: var(--text-xs); text-align: right; color: var(--ink-2); }
+.lrow .track::after { border-left-color: var(--threshold-colour, var(--h2)); }
+.verdict { margin-top: var(--s3); font-size: var(--text-sm); }
+@media (max-width: 640px) {
+  .lrow { grid-template-columns: 1fr; gap: var(--s1); padding: var(--s1) 0; }
+  .lrow .val { text-align: left; }
+}
+
+/* Toast for confirmations */
+.toast { position: fixed; left: 50%; bottom: var(--s5); transform: translateX(-50%); max-width: min(92vw, 520px); background: var(--ink); color: var(--ground); padding: var(--s3) var(--s4); border-radius: var(--radius-md); font-size: var(--text-sm); box-shadow: 0 1px 2px oklch(0.2 0.02 250 / 0.2), 0 8px 24px oklch(0.2 0.02 250 / 0.18); opacity: 0; pointer-events: none; }
+.toast.show { opacity: 1; }
+
+@media (prefers-reduced-motion: no-preference) {
+  .btn { transition: background-color var(--fast) var(--ease-out), border-color var(--fast) var(--ease-out); }
+  .spend-bar .spent, .spend-bar .projected { transition: transform var(--settle) var(--ease-out); }
+  .item.leaving { transition: opacity var(--settle) var(--ease-out), transform var(--settle) var(--ease-out); opacity: 0; transform: translateX(24px); }
+  .item.entering { animation: enter var(--settle) var(--ease-out); }
+  .toast { transition: opacity var(--fast) var(--ease-out); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .flash::before { animation: none; }
+}
+@keyframes enter { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+
+@media (max-width: 640px) {
+  main { padding: var(--s4); }
+  .bar-inner { padding: var(--s2) var(--s4); gap: var(--s2) var(--s4); }
+  .sample-note { flex-basis: 100%; order: 2; }
+  .tabs a { padding: 0 var(--s2); }
+  .panel { padding: var(--s4); }
+}
+</style>
+</head>
+<body>
+<header class="bar">
+  <div class="bar-inner">
+    <a class="wordmark" href="#overview">eval-mutation-validity</a>
+    <p class="sample-note">Mock-up with sample data, set at week 21 of 32</p>
+    <nav aria-label="Views">
+      <ul class="tabs">
+        <li><a href="#overview" data-view="overview">Overview</a></li>
+        <li><a href="#corpus" data-view="corpus">Corpus</a></li>
+        <li><a href="#hypotheses" data-view="hypotheses">Hypotheses</a></li>
+        <li><a href="#risks" data-view="risks">Risks</a></li>
+      </ul>
+    </nav>
+    <button class="btn live-control" id="live-toggle" aria-pressed="false">Pause live updates</button>
+  </div>
+</header>
+
+<main>
+  <section class="view" id="view-overview" aria-labelledby="overview-title">
+    <h1 class="visually-hidden" id="overview-title">Overview</h1>
+
+    <div class="rail panel" aria-label="Project weeks">
+      <div class="rail-text">
+        <p><strong>Week 21 of 32.</strong> Measurements under way for <span class="badge-group"><span class="badge badge-h1">H1</span> <span class="badge badge-h2">H2</span> <span class="badge badge-h3">H3</span></span></p>
+        <p>Next: MS3, verdicts on all three, week 24</p>
+      </div>
+      <div class="rail-track" id="rail"></div>
+    </div>
+
+    <div class="overview-grid">
+      <div class="stack">
+        <section class="panel" aria-labelledby="queue-title">
+          <div class="panel-head">
+            <h2 id="queue-title">Needs attention</h2>
+            <p id="queue-count">3 items, most blocking first</p>
+          </div>
+          <ul class="queue" id="queue"></ul>
+        </section>
+
+        <section class="panel" aria-labelledby="spend-title">
+          <div class="panel-head">
+            <h2 id="spend-title">Model spend</h2>
+            <p>Budget fixed in the plan</p>
+          </div>
+          <p class="spend-figure"><span id="spent">US$627</span><small>of US$1000</small></p>
+          <div class="spend-bar" role="img" id="spend-bar" aria-label="Spent and projected spend against the budget">
+            <div class="projected" id="bar-projected"></div>
+            <div class="spent" id="bar-spent"></div>
+          </div>
+          <div class="spend-scale"><span>US$0</span><span>US$1000</span></div>
+          <dl class="facts">
+            <dt>Case runs</dt><dd><span class="fig" id="runs-done">418,060</span> of <span class="fig" id="runs-planned">453,180</span></dd>
+            <dt>Measured cost per case run</dt><dd class="fig">US$0.0015</dd>
+            <dt>Projected at end of measurement</dt><dd class="fig" id="projected">US$680</dd>
+          </dl>
+        </section>
+      </div>
+
+      <section class="panel forest" aria-labelledby="forest-title">
+        <div class="panel-head">
+          <h2 id="forest-title"><span class="badge badge-h1">H1</span> Mutation score against detection, per regression</h2>
+          <p>Kendall's τ at subset size 15, 10,000 subsets</p>
+        </div>
+        <div class="forest-legend">
+          <span class="legend-key"><i class="key-ci"></i>τ with 95% interval</span>
+          <span class="legend-key"><i class="key-running"></i>case runs still landing</span>
+          <span class="legend-key"><i class="key-threshold"></i>threshold, τ = 0.2</span>
+        </div>
+        <ul class="forest-rows" id="forest"></ul>
+        <div class="axis" aria-hidden="true"><span></span><div class="axis-scale" id="axis"></div><span></span></div>
+        <p class="forest-verdict" id="forest-verdict"></p>
+      </section>
+    </div>
+  </section>
+
+  <section class="view" id="view-corpus" aria-labelledby="corpus-title" hidden>
+    <div class="view-head">
+      <h1 id="corpus-title">Corpus</h1>
+      <p>23 regressions frozen at MS2, from 41 candidates in 5 targets. A pair enters only if its oracle fails at the regressed commit in at least 8 of 10 runs and passes at the fixed commit in at least 8 of 10.</p>
+    </div>
+    <div class="filters" role="group" aria-label="Show regressions by status">
+      <button class="btn" data-filter="all" aria-pressed="true">All attempted</button>
+      <button class="btn" data-filter="corpus" aria-pressed="false">In corpus</button>
+      <button class="btn" data-filter="rejected" aria-pressed="false">Rejected by oracle</button>
+      <button class="btn" data-filter="unreproducible" aria-pressed="false">Unreproducible</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <caption id="corpus-caption">29 attempted; 12 further candidates were not attempted</caption>
+        <thead><tr><th scope="col">Regression</th><th scope="col">Commits, regressed to fixed</th><th scope="col">Class</th><th scope="col" class="num">Oracle fails at regressed</th><th scope="col" class="num">Oracle passes at fixed</th><th scope="col" class="num">Cases</th><th scope="col">Status</th></tr></thead>
+        <tbody id="corpus-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="view" id="view-hypotheses" aria-labelledby="hyp-title" hidden>
+    <div class="view-head">
+      <h1 id="hyp-title">Hypotheses</h1>
+      <p>Thresholds and the analysis plan were fixed at MS1, week 10. Verdicts are due at MS3, week 24.</p>
+    </div>
+    <div class="hyp-list" id="hyp-list"></div>
+  </section>
+
+  <section class="view" id="view-risks" aria-labelledby="risks-title" hidden>
+    <div class="view-head">
+      <h1 id="risks-title">Risks</h1>
+      <p>Each trigger is checked in its week; when one fires, the plan moves to its fallback.</p>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th scope="col">Risk</th><th scope="col">Threatens</th><th scope="col">Trigger</th><th scope="col">Status</th><th scope="col">What happened</th></tr></thead>
+        <tbody id="risks-body"></tbody>
+      </table>
+    </div>
+  </section>
+</main>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// Sample data. Thresholds, weeks, rules and the budget come from the project plan;
+// targets, identifiers and figures are invented to show the screen at work.
+const WEEKS = 32;
+const NOW_WEEK = 21;
+const BUDGET = 1000;
+const COST_PER_RUN = 0.0015;
+const THRESHOLD = 0.2;
+const AXIS = { min: -0.3, max: 0.7, ticks: [-0.2, 0, 0.2, 0.4, 0.6] };
+const BATCH_RUNS = 1300;
+const TICK_MS = 3000;
+
+const CASES = { "ragdesk": 48, "faqbot": 36, "toolsmith": 62, "docsearch-agent": 54, "ledger-assistant": 31 };
+const runsFor = (target) => CASES[target] * 10 * (2 + 40);
+
+const regressions = [
+  ["ragdesk", "r-01", "prompt", 0.12, 0.15], ["ragdesk", "r-02", "retrieval", 0.41, 0.135],
+  ["ragdesk", "r-03", "model", -0.04, 0.15], ["ragdesk", "r-04", "retrieval", 0.33, 0.145],
+  ["ragdesk", "r-05", "prompt", 0.06, 0.15], ["ragdesk", "r-06", "model", 0.21, 0.155],
+  ["faqbot", "r-02", "prompt", 0.04, 0.15], ["faqbot", "r-03", "prompt", 0.24, 0.145],
+  ["faqbot", "r-07", "retrieval", 0.10, 0.15], ["faqbot", "r-09", "prompt", -0.09, 0.15],
+  ["faqbot", "r-11", "mixed", 0.16, 0.145],
+  ["toolsmith", "r-01", "tool", 0.29, 0.155], ["toolsmith", "r-02", "tool", 0.02, 0.15],
+  ["toolsmith", "r-03", "tool", 0.15, 0.155], ["toolsmith", "r-04", "tool", 0.07, 0.15],
+  ["docsearch-agent", "r-01", "retrieval", 0.36, 0.145], ["docsearch-agent", "r-02", "model", 0.08, 0.155],
+  ["docsearch-agent", "r-03", "prompt", 0.18, 0.155], ["docsearch-agent", "r-04", "retrieval", -0.01, 0.15],
+  ["docsearch-agent", "r-05", "retrieval", 0.27, 0.14],
+  ["ledger-assistant", "r-01", "tool", null, null], ["ledger-assistant", "r-02", "retrieval", null, null],
+  ["ledger-assistant", "r-03", "prompt", null, null],
+].map(([target, code, cls, tau, halfWidth]) => ({
+  id: `${target}/${code}`, target, cls, tau, halfWidth, total: runsFor(target), done: runsFor(target),
+  state: tau === null ? "blocked" : "done",
+}));
+
+const byId = (id) => regressions.find((r) => r.id === id);
+Object.assign(byId("docsearch-agent/r-05"), { state: "running", done: 14500 });
+Object.assign(byId("toolsmith/r-04"), { state: "running", done: 8400 });
+for (const r of regressions.filter((r) => r.state === "blocked")) r.done = r.total - CASES[r.target] * 10 * 10;
+
+const outsideCorpus = [
+  { id: "faqbot/r-05", cls: "prompt", fails: 6, passes: 10, status: "rejected", note: "Rejected: oracle failed 6 of 10 at regressed" },
+  { id: "toolsmith/r-06", cls: "tool", fails: 9, passes: 7, status: "rejected", note: "Rejected: oracle passed 7 of 10 at fixed" },
+  { id: "ragdesk/r-08", cls: "retrieval", fails: 5, passes: 9, status: "rejected", note: "Rejected: oracle failed 5 of 10 at regressed" },
+  { id: "docsearch-agent/r-07", cls: "prompt", fails: 7, passes: 8, status: "rejected", note: "Rejected: oracle failed 7 of 10 at regressed" },
+  { id: "faqbot/r-01", cls: "model", fails: null, passes: null, status: "unreproducible", note: "Unreproducible: pinned model retired" },
+  { id: "ledger-assistant/r-04", cls: "retrieval", fails: null, passes: null, status: "unreproducible", note: "Unreproducible: pinned model retired" },
+];
+
+const risks = [
+  { code: "R1", week: 3, risk: "Too few candidates", threatens: ["H1", "H2"], trigger: "Under 34 found, week 3", state: "cleared", what: "41 candidates found in the desk search." },
+  { code: "R2", week: 9, risk: "Too few regressions reproduce", threatens: ["H1", "H2"], trigger: "Under 3 of 5, week 9", state: "cleared", what: "4 of 5 feasibility candidates reproduced." },
+  { code: "R3", week: 10, risk: "Corpus too small for H1", threatens: ["H1"], trigger: "Simulated half-width over 0.2, week 10", state: "fired", what: "Simulated half-width 0.21 at 20 regressions. Fallback taken: corpus target raised to 23." },
+  { code: "R4", week: 12, risk: "Spend over budget", threatens: ["H1", "H3"], trigger: "Projected over budget, week 12", state: "cleared", what: "Projected US$741 against US$1000." },
+  { code: "R5", week: 14, risk: "Suites too small to subsample", threatens: ["H1"], trigger: "Under 3 targets with 30 or more cases, week 14", state: "cleared", what: "5 targets with 30 or more cases; smallest has 31." },
+  { code: "R6", week: 19, risk: "muteval cannot mutate a target", threatens: ["H1", "H2"], trigger: "Adapter fails, week 19", state: "fired", what: "Tool mutants fail to apply to ledger-assistant; 3 regressions blocked." },
+];
+
+const milestones = [
+  { code: "MS1", week: 10, name: "Analysis plan fixed" },
+  { code: "MS2", week: 18, name: "Corpus frozen" },
+  { code: "MS3", week: 24, name: "Verdicts" },
+  { code: "MS4", week: 32, name: "Preprint and benchmark public" },
+];
+
+const queueItems = [
+  {
+    key: "adapter", flag: "R6 fired", flagClass: "status-fired", since: "since week 19",
+    title: "muteval cannot apply tool mutants to <code>ledger-assistant</code>",
+    detail: "0 of 10 tool mutants applied, so its 3 regressions have no mutation score for H1 or H2.",
+    action: "Open adapter task for ledger-assistant", done: "Adapter task opened for ledger-assistant",
+    link: { href: "#risks", text: "R6 in the risk table" },
+  },
+  {
+    key: "resume-r04", flag: "Run stopped", flagClass: "status-watch", since: "12 min ago",
+    title: "Run 7 of 10 for <code>ragdesk/r-04</code> stopped at the regressed commit",
+    detail: "The provider returned a rate limit. Calls already made are cached, so resuming repeats none of them.",
+    action: "Resume run 7 of ragdesk/r-04", done: "Run 7 of ragdesk/r-04 resumed",
+  },
+  {
+    key: "mixed", flag: "Class rule", flagClass: "status-quiet", since: "since MS2",
+    title: "The fix for <code>faqbot/r-11</code> changes prompt and retriever files",
+    detail: "The class rule fixed at MS1 reports a fix that changes more than one class separately and leaves it out of H2.",
+    action: "Leave faqbot/r-11 out of H2", done: "faqbot/r-11 left out of H2",
+  },
+];
+const lateItem = {
+  key: "resume-t02", flag: "Run stopped", flagClass: "status-watch", since: "just now",
+  title: "Run 3 of 10 for <code>toolsmith/r-04</code> stopped under a tool mutant",
+  detail: "The provider returned a rate limit. Calls already made are cached.",
+  action: "Resume run 3 of toolsmith/r-04", done: "Run 3 of toolsmith/r-04 resumed",
+};
+
+// Helpers
+const $ = (selector) => document.querySelector(selector);
+const pct = (value) => `${((value - AXIS.min) / (AXIS.max - AXIS.min)) * 100}%`;
+const fmt = (value) => (value < 0 ? "−" : "") + Math.abs(value).toFixed(2);
+const money = (value) => `US$${Math.round(value).toLocaleString("en-GB")}`;
+const count = (value) => value.toLocaleString("en-GB");
+const clamp = (value) => Math.min(AXIS.max, Math.max(AXIS.min, value));
+const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+
+function flash(element) {
+  element.classList.remove("flash");
+  void element.offsetWidth;
+  element.classList.add("flash");
+}
+
+let toastTimer;
+function confirm(message) {
+  const toast = $("#toast");
+  toast.textContent = message;
+  toast.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+// Week rail
+function renderRail() {
+  const rail = $("#rail");
+  const at = (week) => `${(week / WEEKS) * 100}%`;
+  let html = `<div class="rail-line"></div><div class="rail-done" style="width:${at(NOW_WEEK)}"></div>`;
+  for (const m of milestones) {
+    html += `<div class="rail-mark milestone${m.week <= NOW_WEEK ? " done" : ""}" style="left:${at(m.week)}" title="${m.code}, ${m.name}, week ${m.week}"><span>${m.code}</span><i></i></div>`;
+  }
+  for (const r of risks) {
+    const label = r.state === "fired" ? `<span>${r.code}</span>` : "";
+    html += `<div class="rail-mark trigger${r.state === "fired" ? " fired" : ""}" style="left:${at(r.week)}" title="${r.code}, ${r.risk}, ${r.state}, week ${r.week}"><i></i>${label}</div>`;
+  }
+  html += `<div class="rail-now" style="left:${at(NOW_WEEK)}" title="Week ${NOW_WEEK}"></div>`;
+  rail.innerHTML = html;
+}
+
+// Forest plot
+function interval(r) {
+  const halfWidth = r.halfWidth * Math.sqrt(r.total / r.done);
+  return [r.tau - halfWidth, r.tau + halfWidth];
+}
+
+function pooled() {
+  const complete = regressions.filter((r) => r.state === "done");
+  const n = complete.length;
+  const mean = complete.reduce((sum, r) => sum + r.tau, 0) / n;
+  const sd = Math.sqrt(complete.reduce((sum, r) => sum + (r.tau - mean) ** 2, 0) / (n - 1));
+  const halfWidth = (1.96 * sd) / Math.sqrt(n);
+  return { n, mean, lo: mean - halfWidth, hi: mean + halfWidth };
+}
+
+function forestRow(r, previousTarget) {
+  const li = document.createElement("li");
+  li.className = `frow ${r.state}${previousTarget && previousTarget !== r.target ? " target-start" : ""}`;
+  li.dataset.id = r.id;
+  fillForestRow(li, r);
+  return li;
+}
+
+function fillForestRow(li, r) {
+  li.className = li.className.replace(/\b(done|running|blocked)\b/, r.state);
+  const name = `<span class="id" title="${r.id}, ${r.cls}">${r.id}</span>`;
+  if (r.state === "blocked") {
+    const note = r.adapterOpen ? "Waiting for the ledger-assistant adapter" : "Blocked by R6: no tool mutants";
+    li.innerHTML = `${name}<div class="track"><span class="blocked-note">${note}</span></div><span class="val"></span>`;
+    return;
+  }
+  const [lo, hi] = interval(r);
+  const detail = r.state === "running" ? `${Math.round((r.done / r.total) * 100)}% of runs` : `[${fmt(lo)}, ${fmt(hi)}]`;
+  li.innerHTML = `${name}<div class="track" aria-hidden="true"><span class="ci" style="left:${pct(clamp(lo))};width:calc(${pct(clamp(hi))} - ${pct(clamp(lo))})"></span><span class="pt" style="left:${pct(r.tau)}"></span></div><span class="val">${fmt(r.tau)}<span class="ci-text"> ${detail}</span></span>`;
+  li.setAttribute("aria-label", r.state === "running"
+    ? `${r.id}: provisional tau ${fmt(r.tau)}, ${Math.round((r.done / r.total) * 100)} percent of case runs done`
+    : `${r.id}: tau ${fmt(r.tau)}, interval ${fmt(lo)} to ${fmt(hi)}`);
+}
+
+function renderForest() {
+  const list = $("#forest");
+  const forest = list.closest(".forest");
+  forest.style.setProperty("--zero", pct(0));
+  forest.style.setProperty("--threshold", pct(THRESHOLD));
+  list.innerHTML = "";
+  let previousTarget = null;
+  for (const r of regressions) {
+    list.append(forestRow(r, previousTarget));
+    previousTarget = r.target;
+  }
+  const pooledRow = document.createElement("li");
+  pooledRow.className = "frow pooled";
+  pooledRow.id = "pooled-row";
+  list.append(pooledRow);
+  renderPooled();
+  $("#axis").innerHTML = AXIS.ticks.map((t) => `<span style="left:${pct(t)}">${fmt(t)}</span>`).join("");
+}
+
+function renderPooled() {
+  const p = pooled();
+  $("#pooled-row").innerHTML = `<span class="id">Pooled τ</span><div class="track" aria-hidden="true"><span class="ci" style="left:${pct(p.lo)};width:calc(${pct(p.hi)} - ${pct(p.lo)})"></span><span class="pt" style="left:${pct(p.mean)}"></span></div><span class="val">${fmt(p.mean)}<span class="ci-text"> [${fmt(p.lo)}, ${fmt(p.hi)}]</span></span>`;
+  const verdict = p.lo > THRESHOLD ? "holds so far" : p.hi < THRESHOLD ? "refuted so far" : "inconclusive so far: the interval contains 0.2";
+  $("#forest-verdict").innerHTML = `<strong>${p.n} of ${regressions.length} regressions complete.</strong> Pooled τ ${fmt(p.mean)}, 95% interval ${fmt(p.lo)} to ${fmt(p.hi)}; H1 is ${verdict}. H1 holds if the lower bound clears 0.2 and is refuted if the upper bound falls below it.`;
+}
+
+// Spend
+function renderSpend() {
+  const done = regressions.reduce((sum, r) => sum + r.done, 0);
+  const planned = regressions.reduce((sum, r) => sum + r.total, 0);
+  const spent = done * COST_PER_RUN;
+  const projected = planned * COST_PER_RUN;
+  $("#spent").textContent = money(spent);
+  $("#runs-done").textContent = count(done);
+  $("#runs-planned").textContent = count(planned);
+  $("#projected").textContent = money(projected);
+  $("#bar-spent").style.transform = `scaleX(${spent / BUDGET})`;
+  $("#bar-projected").style.transform = `scaleX(${projected / BUDGET})`;
+  $("#spend-bar").setAttribute("aria-label", `${money(spent)} spent and ${money(projected)} projected of the ${money(BUDGET)} budget`);
+}
+
+// Attention queue
+function queueItemElement(item, isFirst) {
+  const li = document.createElement("li");
+  li.className = "item";
+  li.dataset.key = item.key;
+  const link = item.link ? `<a href="${item.link.href}">${item.link.text}</a>` : "";
+  li.innerHTML = `<div class="item-flag"><span class="status ${item.flagClass}">${item.flag}</span><span class="since">${item.since}</span></div>
+    <p class="item-title">${item.title}</p><p class="item-detail">${item.detail}</p>
+    <div class="item-actions"><button class="btn${isFirst ? " btn-primary" : ""}" type="button">${item.action}</button>${link}</div>`;
+  li.querySelector("button").addEventListener("click", () => act(item, li));
+  return li;
+}
+
+function renderQueue() {
+  const queue = $("#queue");
+  queue.innerHTML = "";
+  queueItems.forEach((item, index) => queue.append(queueItemElement(item, index === 0)));
+  updateQueueState();
+}
+
+// New items wait behind a button in the heading, so the list never moves under the reader.
+let pendingItems = [];
+
+function showPending() {
+  for (const item of pendingItems) {
+    queueItems.push(item);
+    const li = queueItemElement(item, false);
+    li.classList.add("entering");
+    $("#queue .queue-empty")?.remove();
+    $("#queue").append(li);
+  }
+  pendingItems = [];
+  updateQueueState();
+}
+
+function updateQueueState() {
+  const queue = $("#queue");
+  const items = [...queue.querySelectorAll(".item")];
+  items.forEach((li, index) => li.querySelector("button").classList.toggle("btn-primary", index === 0));
+  const summary = items.length === 0 ? "Clear" : `${items.length} ${items.length === 1 ? "item" : "items"}, most blocking first`;
+  const count = $("#queue-count");
+  count.textContent = pendingItems.length === 0 ? summary : `${items.length} ${items.length === 1 ? "item" : "items"}. `;
+  if (pendingItems.length > 0) {
+    const reveal = document.createElement("button");
+    reveal.type = "button";
+    reveal.className = "show-new";
+    reveal.textContent = `Show ${pendingItems.length} new`;
+    reveal.addEventListener("click", showPending);
+    count.append(reveal);
+  }
+  let empty = queue.querySelector(".queue-empty");
+  if (items.length === 0 && !empty) {
+    empty = document.createElement("li");
+    empty.className = "queue-empty";
+    empty.textContent = "Nothing needs attention. The next check is MS3, verdicts on H1, H2 and H3, at week 24.";
+    queue.append(empty);
+  }
+}
+
+function act(item, li) {
+  const button = li.querySelector("button");
+  button.disabled = true;
+  if (item.key === "adapter") {
+    for (const r of regressions.filter((r) => r.state === "blocked")) {
+      r.adapterOpen = true;
+      const row = $(`[data-id="${r.id}"]`);
+      fillForestRow(row, r);
+      flash(row);
+    }
+    risks.find((r) => r.code === "R6").what = "Tool mutants fail to apply to ledger-assistant. Fallback started: adapter task opened, to be offered upstream.";
+    renderRisks();
+  }
+  const remove = () => { li.remove(); updateQueueState(); };
+  li.classList.add("leaving");
+  if (reducedMotion.matches) remove();
+  else setTimeout(remove, 260);
+  confirm(item.done);
+}
+
+// Corpus table
+const commitHash = (seed) => {
+  let h = 2166136261;
+  for (const ch of seed) h = Math.imul(h ^ ch.charCodeAt(0), 16777619) >>> 0;
+  return h.toString(16).padStart(8, "0").slice(0, 7);
+};
+
+function corpusRows() {
+  const inCorpus = regressions.map((r, i) => ({
+    id: r.id, cls: r.cls, fails: 8 + (i % 3), passes: 10 - (i % 2), cases: CASES[r.target],
+    status: "corpus", note: "In corpus",
+  }));
+  const others = outsideCorpus.map((r) => ({ ...r, cases: CASES[r.id.split("/")[0]] }));
+  return [...inCorpus, ...others];
+}
+
+function renderCorpus(filter) {
+  const rows = corpusRows().filter((r) => filter === "all" || r.status === filter);
+  const statusClass = { corpus: "status-cleared", rejected: "status-watch", unreproducible: "status-fired" };
+  $("#corpus-body").innerHTML = rows.map((r) => `<tr>
+    <td><span class="id">${r.id}</span></td>
+    <td><span class="id">${commitHash(r.id + "a")} → ${commitHash(r.id + "b")}</span></td>
+    <td>${r.cls}</td>
+    <td class="num fig">${r.fails === null ? "not run" : `${r.fails} of 10`}</td>
+    <td class="num fig">${r.passes === null ? "not run" : `${r.passes} of 10`}</td>
+    <td class="num fig">${r.cases}</td>
+    <td><span class="status ${statusClass[r.status]}">${r.note}</span></td></tr>`).join("");
+  const labels = { all: "29 attempted; 12 further candidates were not attempted", corpus: "23 in the corpus", rejected: "4 rejected by the 8 of 10 oracle rule", unreproducible: "2 unreproducible; never rerun on a substitute model" };
+  $("#corpus-caption").textContent = labels[filter];
+}
+
+function bindFilters() {
+  for (const button of document.querySelectorAll("[data-filter]")) {
+    button.addEventListener("click", () => {
+      for (const other of document.querySelectorAll("[data-filter]")) other.setAttribute("aria-pressed", String(other === button));
+      renderCorpus(button.dataset.filter);
+    });
+  }
+}
+
+// Hypotheses
+function lineChart(rows, domain, threshold, thresholdColour) {
+  const at = (v) => `${((v - domain[0]) / (domain[1] - domain[0])) * 100}%`;
+  const body = rows.map((row) => `<div class="lrow"><span>${row.label}</span>
+    <div class="track" aria-hidden="true" style="--zero:${at(domain[0] < 0 ? 0 : domain[0])};--threshold:${at(threshold)};--threshold-colour:${thresholdColour}">
+      <span class="ci" style="left:${at(row.lo)};width:calc(${at(row.hi)} - ${at(row.lo)});${row.colour ? `background:${row.colour}` : ""}"></span>
+      <span class="pt" style="left:${at(row.value)};${row.colour ? `background:${row.colour}` : ""}"></span></div>
+    <span class="val">${row.text}</span></div>`).join("");
+  const ticks = domain[2].map((t) => `<span style="left:${at(t)}">${tickLabel(t, domain[3])}</span>`).join("");
+  return `<div class="line-chart">${body}<div class="lrow" aria-hidden="true"><span></span><div class="axis-scale">${ticks}</div><span></span></div></div>`;
+}
+const tickLabel = (t, unit) => (unit === "%" ? `${t}%` : fmt(t));
+
+function renderHypotheses() {
+  const p = pooled();
+  const h1 = lineChart([
+    { label: "Mutation score", value: p.mean, lo: p.lo, hi: p.hi, text: `${fmt(p.mean)} [${fmt(p.lo)}, ${fmt(p.hi)}]` },
+    { label: "Component coverage, the baseline", value: 0.09, lo: 0.01, hi: 0.18, colour: "var(--ink-3)", text: "0.09 [0.01, 0.18]" },
+  ], [-0.1, 0.5, [0, 0.2, 0.4]], THRESHOLD, "var(--h2)");
+  const h2 = lineChart([
+    { label: "Coupled share, 11 of 18", value: 61, lo: 39, hi: 80, colour: "var(--h2)", text: "61% [39, 80]" },
+    { label: "Random class matching", value: 28, lo: 14, hi: 45, colour: "var(--ink-3)", text: "28% [14, 45]" },
+  ], [0, 100, [0, 25, 50, 75, 100], "%"], 50, "var(--ink-2)");
+  const h3 = lineChart([
+    { label: "Regressions", value: 9.4, lo: 7.1, hi: 11.9, colour: "var(--h3)", text: "9.4% [7.1, 11.9]" },
+    { label: "Mutants", value: 7.8, lo: 6.5, hi: 9.2, colour: "var(--h3)", text: "7.8% [6.5, 9.2]" },
+  ], [0, 15, [0, 5, 10, 15], "%"], 5, "var(--h2)");
+  $("#hyp-list").innerHTML = `
+    <section class="panel" aria-labelledby="h1-title"><div class="hyp-head"><span class="badge badge-h1">H1</span><h2 id="h1-title">At fixed suite size, mutation score predicts real-regression detection</h2></div>
+      <p class="hyp-rule">Holds if the lower bound of the 95% interval on the pooled τ lies above 0.2; refuted if the upper bound lies below 0.2. The baseline asks whether mutation score beats component coverage, which costs nothing extra.</p>
+      ${h1}<p class="verdict"><span class="status status-watch">Inconclusive so far</span>: ${p.n} of ${regressions.length} regressions complete; the interval contains 0.2.</p></section>
+    <section class="panel" aria-labelledby="h2-title"><div class="hyp-head"><span class="badge badge-h2">H2</span><h2 id="h2-title">Most real regressions are coupled to a mutant of their class</h2></div>
+      <p class="hyp-rule">Refuted if fewer than half of the regressions are coupled, or if the interval on the coupled share minus the random-class share includes zero. Mixed-class fixes are reported separately.</p>
+      ${h2}<p class="verdict"><span class="status status-watch">Running since week 21</span>: 18 of 22 classifiable regressions measured; the 3 ledger-assistant regressions wait on the adapter.</p></section>
+    <section class="panel" aria-labelledby="h3-title"><div class="hyp-head"><span class="badge badge-h3">H3</span><h2 id="h3-title">A single run gives the wrong verdict often enough to matter</h2></div>
+      <p class="hyp-rule">Refuted if the upper bound of the 95% interval on the disagreement share lies below 5%, for regressions and for mutants.</p>
+      ${h3}<p class="verdict"><span class="status status-cleared">Not refuted</span>: both intervals lie wholly above 5%.</p></section>`;
+}
+
+// Risks
+function renderRisks() {
+  const statusText = { cleared: ["Cleared", "status-cleared"], fired: ["Fired", "status-fired"] };
+  $("#risks-body").innerHTML = risks.map((r) => `<tr>
+    <td><strong>${r.code}</strong> ${r.risk}</td>
+    <td>${r.threatens.map((h) => `<span class="badge badge-${h.toLowerCase()}">${h}</span>`).join(" ")}</td>
+    <td>${r.trigger}</td>
+    <td><span class="status ${statusText[r.state][1]}">${statusText[r.state][0]}</span></td>
+    <td>${r.what}</td></tr>`).join("");
+}
+
+// Views, held in the URL hash
+const VIEWS = ["overview", "corpus", "hypotheses", "risks"];
+function showView() {
+  const name = VIEWS.includes(location.hash.slice(1)) ? location.hash.slice(1) : "overview";
+  for (const view of VIEWS) $(`#view-${view}`).hidden = view !== name;
+  for (const link of document.querySelectorAll("[data-view]")) {
+    if (link.dataset.view === name) link.setAttribute("aria-current", "page");
+    else link.removeAttribute("aria-current");
+  }
+  if (name === "hypotheses") renderHypotheses();
+}
+
+// Live sample: one batch of case runs lands every few seconds.
+let paused = false;
+let tick = 0;
+let lateItemShown = false;
+
+function step() {
+  if (paused) return;
+  tick += 1;
+  if (tick === 4 && !lateItemShown) {
+    lateItemShown = true;
+    pendingItems.push(lateItem);
+    updateQueueState();
+    flash($("#queue-count"));
+    return;
+  }
+  const running = regressions.filter((r) => r.state === "running");
+  if (running.length === 0) return;
+  const r = running[tick % running.length];
+  r.done = Math.min(r.total, r.done + BATCH_RUNS);
+  if (r.done === r.total) r.state = "done";
+  const row = $(`[data-id="${r.id}"]`);
+  fillForestRow(row, r);
+  flash(row);
+  renderSpend();
+  flash($("#spent"));
+  if (r.state === "done") {
+    renderPooled();
+    flash($("#pooled-row"));
+  }
+}
+
+$("#live-toggle").addEventListener("click", (event) => {
+  paused = !paused;
+  event.currentTarget.setAttribute("aria-pressed", String(paused));
+  event.currentTarget.textContent = paused ? "Resume live updates" : "Pause live updates";
+});
+
+window.addEventListener("hashchange", showView);
+renderRail();
+renderForest();
+renderSpend();
+renderQueue();
+renderCorpus("all");
+renderRisks();
+bindFilters();
+showView();
+setTimeout(step, 900);
+setInterval(step, TICK_MS);
+</script>
+</body>
+</html>

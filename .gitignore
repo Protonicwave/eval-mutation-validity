@@ -1,0 +1,26 @@
+__pycache__/
+*.py[cod]
+.venv/
+build/
+dist/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.env
+
+# Target worktrees and run outcomes, rebuilt by the harness.
+work/
+data/
+
+# LaTeX build output, except the rendered plan.
+!proposal/build/
+proposal/build/*
+!proposal/build/main.pdf
+
+# Full texts of copyrighted papers, kept locally for quote checking.
+proposal/papadakis2018.txt
+proposal/atil_acl.html
+proposal/sources.cache.json
